@@ -440,6 +440,10 @@ jobs:
 
           CONFIG_PACKAGE_luci-app-passwall=y
           CONFIG_PACKAGE_xray-core=y
+          # PassWall on aarch64 enables Sing-Box by default; disable it to avoid the current
+          # go-json-experiment/json dependency mismatch in OpenWrt packages master.
+          CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox=n
+          CONFIG_PACKAGE_sing-box=n
 
           CONFIG_PACKAGE_geoview=y
           CONFIG_PACKAGE_v2ray-geoip=y
