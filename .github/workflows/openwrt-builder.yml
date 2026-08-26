@@ -416,7 +416,7 @@ jobs:
 
           CONFIG_PACKAGE_luci-app-passwall=y
           CONFIG_PACKAGE_xray-core=y
-          CONFIG_PACKAGE_sing-box=y
+          # CONFIG_PACKAGE_sing-box is not set
 
           CONFIG_PACKAGE_geoview=y
           CONFIG_PACKAGE_v2ray-geoip=y
@@ -792,7 +792,7 @@ jobs:
           echo "========================================"
 
           grep -E \
-            'CONFIG_PACKAGE_(luci-app-passwall|xray-core|sing-box|geoview|v2ray-geoip|v2ray-geosite)' \
+            'CONFIG_PACKAGE_(luci-app-passwall|xray-core|geoview|v2ray-geoip|v2ray-geosite)' \
             .config || true
 
           echo "========================================"
