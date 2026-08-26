@@ -384,7 +384,8 @@ jobs:
           # ==========================================================
           #
 
-          CONFIG_PACKAGE_luci-app-store=y
+          ./scripts/feeds update istore
+          ./scripts/feeds install -d y -p istore luci-app-store
 
           #
           # ==========================================================
@@ -430,14 +431,11 @@ jobs:
           # ==========================================================
           # QuickFile
           #
-          # QuickFile 依赖 nginx
+          # QuickFile 
           # ==========================================================
           #
 
           CONFIG_PACKAGE_luci-app-quickfile=y
-          CONFIG_PACKAGE_quickfile=y
-          CONFIG_PACKAGE_luci-nginx=y
-          CONFIG_PACKAGE_nginx=y
 
           #
           # ==========================================================
@@ -502,7 +500,6 @@ jobs:
           CONFIG_PACKAGE_tcpdump=y
           CONFIG_PACKAGE_mtr=y
           CONFIG_PACKAGE_htop=y
-          CONFIG_PACKAGE_usbutils=y
 
           #
           # ==========================================================
