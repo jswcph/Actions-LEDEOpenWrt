@@ -4,9 +4,7 @@ name: Build Nokia XG-040G-MF UBI
 on:
   workflow_dispatch:
 
-  push:
-    branches:
-      - main
+  
 
   schedule:
     # 每周日北京时间凌晨 3 点
