@@ -3,8 +3,6 @@ name: Build Nokia XG-040G-MF UBI
 on:
   workflow_dispatch:
 
-  
-
   schedule:
     # 每周日北京时间凌晨 3 点
     # 北京时间 UTC+8
@@ -158,6 +156,31 @@ jobs:
           echo "========================================"
           echo "Feeds installed"
           echo "========================================"
+
+      # ============================================================
+      # 7.1 确保 iStore 软件包正确安装
+      # ============================================================
+      - name: Install iStore Package
+        working-directory: openwrt
+        run: |
+          set -e
+
+          echo "========================================"
+          echo "Install iStore luci-app-store"
+          echo "========================================"
+
+          ./scripts/feeds update istore
+          ./scripts/feeds install -d y -p istore luci-app-store
+
+          echo "========================================"
+          echo "Checking iStore"
+          echo "========================================"
+
+          find package/feeds/istore \
+            -maxdepth 5 \
+            -type f \
+            -name Makefile \
+            -print
 
       # ============================================================
       # 8. 添加 Lucky
@@ -333,6 +356,7 @@ jobs:
 
       # ============================================================
       # 14. 生成 Nokia XG-040G-MF UBI 配置
+      # Airoha AN7583
       # ============================================================
       - name: Generate XG-040G-MF UBI Config
         working-directory: openwrt
@@ -383,8 +407,7 @@ jobs:
           # ==========================================================
           #
 
-          ./scripts/feeds update istore
-          ./scripts/feeds install -d y -p istore luci-app-store
+          CONFIG_PACKAGE_luci-app-store=y
 
           #
           # ==========================================================
@@ -430,7 +453,7 @@ jobs:
           # ==========================================================
           # QuickFile
           #
-          # QuickFile 
+          # QuickFile
           # ==========================================================
           #
 
@@ -998,4 +1021,3 @@ jobs:
             openwrt/logs/
             openwrt/tmp/
           retention-days: 7
-```
