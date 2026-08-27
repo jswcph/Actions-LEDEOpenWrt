@@ -110,19 +110,7 @@ jobs:
           echo "OpenWrt clone completed successfully."
 
       # ============================================================
-      # 5. 添加 PassWall
-      # ============================================================
-      - name: Add PassWall Feeds
-        working-directory: openwrt
-        run: |
-          set -e
 
-          cat >> feeds.conf.default <<'EOF'
-
-          src-git passwall_packages https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git;main
-          src-git passwall_luci https://github.com/Openwrt-Passwall/openwrt-passwall.git;main
-
-          EOF
 
       # ============================================================
       # 6. 添加 iStore
@@ -293,17 +281,6 @@ jobs:
           set -e
 
           echo "========================================"
-          echo "PASSWALL"
-          echo "========================================"
-
-          find package/feeds \
-            -maxdepth 5 \
-            -type f \
-            -name Makefile \
-            -path '*passwall*' \
-            2>/dev/null || true
-
-          echo "========================================"
           echo "iStore"
           echo "========================================"
 
@@ -407,20 +384,6 @@ jobs:
           #
 
           CONFIG_PACKAGE_luci-app-store=y
-
-          #
-          # ==========================================================
-          # PassWall
-          # ==========================================================
-          #
-
-          CONFIG_PACKAGE_luci-app-passwall=y
-          CONFIG_PACKAGE_xray-core=y
-          # CONFIG_PACKAGE_sing-box is not set
-
-          CONFIG_PACKAGE_geoview=y
-          CONFIG_PACKAGE_v2ray-geoip=y
-          CONFIG_PACKAGE_v2ray-geosite=y
 
           #
           # ==========================================================
@@ -786,15 +749,7 @@ jobs:
           grep \
             'CONFIG_PACKAGE_luci-app-store' \
             .config || true
-
-          echo "========================================"
-          echo "PASSWALL"
-          echo "========================================"
-
-          grep -E \
-            'CONFIG_PACKAGE_(luci-app-passwall|xray-core|geoview|v2ray-geoip|v2ray-geosite)' \
-            .config || true
-
+            
           echo "========================================"
           echo "OPENCLASH"
           echo "========================================"
