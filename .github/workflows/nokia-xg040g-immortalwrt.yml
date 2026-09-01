@@ -775,7 +775,57 @@ jobs:
             2>/dev/null \
             | grep -E '/(taskd|luci-lib-taskd|luci-lib-xterm)/Makefile' \
             | sort || true      
-       # ======检查iStore Kconfig==========    
+      # ======检查iStore Kconfig========== 
+      # =====================================================
+      # 诊断 luci-app-store 的 Kconfig 依赖链
+      # =====================================================
+
+      - name: Inspect Kconfig Dependency Chain For iStore
+        working-directory: openwrt
+        shell: bash
+        run: |
+          set -e
+
+          echo "========================================"
+          echo "Trigger Kconfig package description generation"
+          echo "========================================"
+
+          make oldconfig <<< "" || true
+
+          echo "========================================"
+          echo "Kconfig dependency description"
+          echo "========================================"
+
+          if grep -q '^config PACKAGE_luci-app-store$' tmp/.config-package.in 2>/dev/null; then
+            grep -B2 -A25 '^config PACKAGE_luci-app-store$' tmp/.config-package.in
+          else
+            echo "WARNING: PACKAGE_luci-app-store symbol not found."
+            echo "This package was filtered out of the Kconfig tree entirely."
+          fi
+
+          echo "========================================"
+          echo "Checking LUCI_DEPENDS packages exist in tree"
+          echo "========================================"
+
+          for pkg in \
+            curl \
+            tar \
+            libuci-lua \
+            mount-utils \
+            luci-lib-taskd \
+            luci-lib-ipkg \
+            opkg \
+            taskd
+          do
+            echo "--- ${pkg} ---"
+
+            find package feeds \
+              -maxdepth 4 \
+              -type d \
+              -name "${pkg}" \
+              2>/dev/null || echo "  (not found)"
+          done      
+     
 
       # =====================================================
       # Make Defconfig
