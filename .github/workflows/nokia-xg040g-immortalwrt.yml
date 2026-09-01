@@ -234,7 +234,7 @@ jobs:
 
 
       # =====================================================
-      # 检查 / 安装 iStore
+      # 安装 iStore
       # =====================================================
 
       - name: Install iStore
@@ -243,28 +243,45 @@ jobs:
           set -e
 
           echo "========================================"
-          echo "Checking iStore feed"
+          echo "Update iStore feed"
           echo "========================================"
 
           ./scripts/feeds update istore
 
+          echo "========================================"
+          echo "Install luci-app-store"
+          echo "========================================"
+
           ./scripts/feeds install -d y -p istore luci-app-store
 
           echo "========================================"
-          echo "Checking luci-app-store"
+          echo "Check iStore source"
           echo "========================================"
 
-          if [ ! -d "feeds/istore/luci-app-store" ]; then
-            echo "ERROR: feeds/istore/luci-app-store not found"
+          if [ ! -f "feeds/istore/luci/luci-app-store/Makefile" ]; then
+            echo "ERROR: luci-app-store Makefile not found"
 
-            echo "Available iStore packages:"
-            find feeds/istore -maxdepth 3 -name Makefile -print | sort || true
+            echo "Available iStore Makefiles:"
+            find feeds/istore -type f -name Makefile | sort
 
             exit 1
           fi
 
-          echo "iStore package found."
+          echo "OK: iStore source found:"
+          echo "feeds/istore/luci/luci-app-store/Makefile"
 
+          echo "========================================"
+          echo "Check installed package link"
+          echo "========================================"
+
+          find package/feeds/istore -maxdepth 3 -type f -name Makefile 2>/dev/null | sort || true
+
+          echo "========================================"
+          echo "iStore package information"
+          echo "========================================"
+
+          grep -E 'LUCI_TITLE|LUCI_DEPENDS|PKG_VERSION' \
+            feeds/istore/luci/luci-app-store/Makefile || true
 
       # =====================================================
       # Lucky
