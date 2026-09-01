@@ -620,36 +620,71 @@ jobs:
       # 后续如果 MD / MF 要不同密码，只需要修改这里。
       # =====================================================
 
-      - name: Set Root Password
-        working-directory: openwrt
+      - name: Setting root password
         shell: bash
+        env:
+          ROOT_PASSWORD: "你的密码"
         run: |
           set -e
-
-          mkdir -p files/etc
 
           echo "========================================"
           echo "Setting root password"
           echo "========================================"
 
-          # 使用 chpasswd 生成 shadow 密码
-          # 这里暂时保持原 Workflow 的默认密码：password
-          #
-          # 注意：
-          # 这个步骤是在构建 rootfs 前执行，
-          # 最终会进入固件中的 /etc/shadow。
+          SHADOW_FILE="${GITHUB_WORKSPACE}/openwrt/files/etc/shadow"
 
-          sed -i '/^root:/d' files/etc/shadow 2>/dev/null || true
+          mkdir -p "${GITHUB_WORKSPACE}/openwrt/files/etc"
 
-          if [ ! -f files/etc/passwd ]; then
-            echo 'root:x:0:0:root:/root:/bin/ash' > files/etc/passwd
+          # 检查密码是否为空
+          if [ -z "${ROOT_PASSWORD}" ]; then
+            echo "ERROR: ROOT_PASSWORD is empty."
+            exit 1
           fi
 
-          echo 'root:password' | chpasswd -R files/etc
+          # 使用 OpenSSL 生成 SHA-512 crypt 密码哈希
+          ROOT_HASH="$(openssl passwd -6 "${ROOT_PASSWORD}")"
 
-          echo "Root shadow entry:"
-          grep '^root:' files/etc/shadow | sed 's/:.*:/:***:/'
+          if [ -z "${ROOT_HASH}" ]; then
+            echo "ERROR: Failed to generate password hash."
+            exit 1
+          fi
 
+          echo "Password hash generated successfully."
+
+          # 如果 shadow 不存在，则创建
+          if [ ! -f "${SHADOW_FILE}" ]; then
+            echo "Creating ${SHADOW_FILE}"
+
+            cat > "${SHADOW_FILE}" <<EOF
+          root:${ROOT_HASH}:0:0:99999:7:::
+          EOF
+
+          else
+            echo "Updating existing root password"
+
+            # 修改 root 第一行密码字段
+            if grep -q '^root:' "${SHADOW_FILE}"; then
+              sed -i -E "s#^root:[^:]*:#root:${ROOT_HASH}:#" "${SHADOW_FILE}"
+            else
+              echo "root:${ROOT_HASH}:0:0:99999:7:::" >> "${SHADOW_FILE}"
+            fi
+          fi
+
+          chmod 600 "${SHADOW_FILE}"
+
+          echo "========================================"
+          echo "Verify root shadow entry"
+          echo "========================================"
+
+          if grep -q '^root:\$6\$' "${SHADOW_FILE}"; then
+            echo "OK: root password hash has been written to shadow."
+          else
+            echo "ERROR: root password hash was not written correctly."
+            exit 1
+          fi
+
+          echo "Shadow file:"
+          sed 's#^root:[^:]*:#root:********:#' "${SHADOW_FILE}"
 
       # =====================================================
       # Make Defconfig
