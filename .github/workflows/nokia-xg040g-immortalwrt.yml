@@ -685,6 +685,84 @@ jobs:
 
           echo "Shadow file:"
           sed 's#^root:[^:]*:#root:********:#' "${SHADOW_FILE}"
+      
+      # ======检查iStore Kconfig==========
+      - name: Diagnose iStore Kconfig
+        working-directory: openwrt
+        shell: bash
+        run: |
+          set -e
+
+          echo "========================================"
+          echo "iStore Kconfig Diagnosis"
+          echo "========================================"
+
+          echo "1. iStore Makefile:"
+          sed -n '1,80p' feeds/istore/luci/luci-app-store/Makefile
+
+          echo
+          echo "2. Installed iStore package:"
+          ls -la package/feeds/istore/luci-app-store/
+
+          echo
+          echo "3. iStore dependencies:"
+          echo "----------------------------------------"
+
+          for pkg in \
+            curl \
+            tar \
+            libuci-lua \
+            mount-utils \
+            luci-lib-taskd \
+            luci-lib-xterm \
+            taskd
+          do
+            echo "===== ${pkg} ====="
+            grep -R \
+              "Package/${pkg}" \
+              package \
+              feeds \
+              2>/dev/null | head -10 || true
+          done
+
+          echo
+          echo "4. Kconfig symbol:"
+          grep -R \
+            "CONFIG_PACKAGE_luci-app-store" \
+            package \
+            feeds \
+            2>/dev/null | head -30 || true
+
+          echo
+          echo "5. Check package metadata:"
+          ./scripts/feeds list -s | grep -E \
+            'luci-app-store|luci-lib-taskd|luci-lib-xterm|taskd' \
+            || true
+
+      - name: Check iStore Before Defconfig
+        working-directory: openwrt
+        run: |
+          set -e
+
+          echo "========================================"
+          echo "iStore BEFORE defconfig"
+          echo "========================================"
+
+          grep '^CONFIG_PACKAGE_luci-app-store=' .config || true
+
+          test -f package/feeds/istore/luci-app-store/Makefile
+
+          echo "iStore Makefile exists."
+
+          echo
+          echo "Available taskd packages:"
+          find package feeds \
+            -type f \
+            -name Makefile \
+            2>/dev/null \
+            | grep -E '/(taskd|luci-lib-taskd|luci-lib-xterm)/Makefile' \
+            | sort || true      
+       # ======检查iStore Kconfig==========    
 
       # =====================================================
       # Make Defconfig
