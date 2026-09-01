@@ -204,9 +204,6 @@ jobs:
           sed -i '1i src-git passwall_packages https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git;main' feeds.conf.default
           sed -i '1i src-git passwall_luci https://github.com/Openwrt-Passwall/openwrt-passwall.git;main' feeds.conf.default
 
-          # iStore
-          echo 'src-git istore https://github.com/linkease/istore.git;main' >> feeds.conf.default
-
           echo "========================================"
           echo "feeds.conf.default"
           echo "========================================"
@@ -250,83 +247,6 @@ jobs:
 
           ./scripts/feeds install -a -p passwall_luci
 
-
-      # =====================================================
-      # 安装 iStore
-      # =====================================================
-
-      - name: Install iStore
-        working-directory: openwrt
-        shell: bash
-        run: |
-          set -e
-
-          echo "========================================"
-          echo "Update iStore feed"
-          echo "========================================"
-
-          ./scripts/feeds update istore
-
-          echo "========================================"
-          echo "Install ALL iStore packages"
-          echo "========================================"
-
-          # 不再只安装 luci-app-store。
-          # iStore 当前包含：
-          #
-          # luci-app-store
-          # luci-lib-taskd
-          # luci-lib-xterm
-          # taskd
-          #
-          # luci-app-store -> luci-lib-taskd
-          # luci-lib-taskd -> luci-lib-xterm + taskd
-          #
-          # 因此直接安装整个 istore feed，避免 Kconfig
-          # 因依赖包没有进入 package/ 而删除 luci-app-store。
-
-          ./scripts/feeds install -a -p istore -d y
-
-          echo "========================================"
-          echo "Verify iStore packages"
-          echo "========================================"
-
-          REQUIRED_ISTORE_FILES="
-          package/feeds/istore/luci-app-store/Makefile
-          package/feeds/istore/luci-lib-taskd/Makefile
-          package/feeds/istore/luci-lib-xterm/Makefile
-          package/feeds/istore/taskd/Makefile
-          "
-
-          for file in $REQUIRED_ISTORE_FILES; do
-            if [ ! -f "$file" ]; then
-              echo "ERROR: Missing iStore package:"
-              echo "$file"
-              exit 1
-            fi
-
-            echo "OK: $file"
-          done
-
-          echo "========================================"
-          echo "iStore dependency Makefiles"
-          echo "========================================"
-
-          echo "--- luci-app-store ---"
-          grep -E 'LUCI_DEPENDS|LUCI_EXTRA_DEPENDS|PKG_VERSION' \
-            package/feeds/istore/luci-app-store/Makefile || true
-
-          echo "--- luci-lib-taskd ---"
-          grep -E 'LUCI_DEPENDS|LUCI_EXTRA_DEPENDS|PKG_VERSION' \
-            package/feeds/istore/luci-lib-taskd/Makefile || true
-
-          echo "--- taskd ---"
-          grep -E 'DEPENDS|PKG_VERSION|PKG_RELEASE' \
-            package/feeds/istore/taskd/Makefile || true
-
-          echo "========================================"
-          echo "iStore installation completed"
-          echo "========================================"
 
       # =====================================================
       # Lucky
@@ -455,7 +375,6 @@ jobs:
           echo "========================================"
 
           REQUIRED_PACKAGES="
-          CONFIG_PACKAGE_luci-app-store
           CONFIG_PACKAGE_luci-i18n-argon-config-zh-cn
           CONFIG_PACKAGE_luci-i18n-firewall-zh-cn
           CONFIG_PACKAGE_luci-i18n-package-manager-zh-cn
@@ -610,10 +529,6 @@ jobs:
 
       # =====================================================
       # 默认 root 密码
-      #
-      # 当前先保持原来的 password。
-      #
-      # 后续如果 MD / MF 要不同密码，只需要修改这里。
       # =====================================================
 
       - name: Setting root password
@@ -681,134 +596,7 @@ jobs:
 
           echo "Shadow file:"
           sed 's#^root:[^:]*:#root:********:#' "${SHADOW_FILE}"
-      
-      # ======检查iStore Kconfig==========
-      - name: Diagnose iStore Kconfig
-        working-directory: openwrt
-        shell: bash
-        run: |
-          set -e
 
-          echo "========================================"
-          echo "iStore Kconfig Diagnosis"
-          echo "========================================"
-
-          echo "1. iStore Makefile:"
-          sed -n '1,80p' feeds/istore/luci/luci-app-store/Makefile
-
-          echo
-          echo "2. Installed iStore package:"
-          ls -la package/feeds/istore/luci-app-store/
-
-          echo
-          echo "3. iStore dependencies:"
-          echo "----------------------------------------"
-
-          for pkg in \
-            curl \
-            tar \
-            libuci-lua \
-            mount-utils \
-            luci-lib-taskd \
-            luci-lib-xterm \
-            taskd
-          do
-            echo "===== ${pkg} ====="
-            grep -R \
-              "Package/${pkg}" \
-              package \
-              feeds \
-              2>/dev/null | head -10 || true
-          done
-
-          echo
-          echo "4. Kconfig symbol:"
-          grep -R \
-            "CONFIG_PACKAGE_luci-app-store" \
-            package \
-            feeds \
-            2>/dev/null | head -30 || true
-
-          echo
-          echo "5. Check package metadata:"
-          ./scripts/feeds list -s | grep -E \
-            'luci-app-store|luci-lib-taskd|luci-lib-xterm|taskd' \
-            || true
-
-      - name: Check iStore Before Defconfig
-        working-directory: openwrt
-        run: |
-          set -e
-
-          echo "========================================"
-          echo "iStore BEFORE defconfig"
-          echo "========================================"
-
-          grep '^CONFIG_PACKAGE_luci-app-store=' .config || true
-
-          test -f package/feeds/istore/luci-app-store/Makefile
-
-          echo "iStore Makefile exists."
-
-          echo
-          echo "Available taskd packages:"
-          find package feeds \
-            -type f \
-            -name Makefile \
-            2>/dev/null \
-            | grep -E '/(taskd|luci-lib-taskd|luci-lib-xterm)/Makefile' \
-            | sort || true      
-      # ======检查iStore Kconfig========== 
-      # =====================================================
-      # 诊断 luci-app-store 的 Kconfig 依赖链
-      # =====================================================
-
-      - name: Inspect Kconfig Dependency Chain For iStore
-        working-directory: openwrt
-        shell: bash
-        run: |
-          set -e
-
-          echo "========================================"
-          echo "Trigger Kconfig package description generation"
-          echo "========================================"
-
-          make oldconfig <<< "" || true
-
-          echo "========================================"
-          echo "Kconfig dependency description"
-          echo "========================================"
-
-          if grep -q '^config PACKAGE_luci-app-store$' tmp/.config-package.in 2>/dev/null; then
-            grep -B2 -A25 '^config PACKAGE_luci-app-store$' tmp/.config-package.in
-          else
-            echo "WARNING: PACKAGE_luci-app-store symbol not found."
-            echo "This package was filtered out of the Kconfig tree entirely."
-          fi
-
-          echo "========================================"
-          echo "Checking LUCI_DEPENDS packages exist in tree"
-          echo "========================================"
-
-          for pkg in \
-            curl \
-            tar \
-            libuci-lua \
-            mount-utils \
-            luci-lib-taskd \
-            luci-lib-ipkg \
-            opkg \
-            taskd
-          do
-            echo "--- ${pkg} ---"
-
-            find package feeds \
-              -maxdepth 4 \
-              -type d \
-              -name "${pkg}" \
-              2>/dev/null || echo "  (not found)"
-          done      
-     
 
       # =====================================================
       # Make Defconfig
@@ -863,17 +651,6 @@ jobs:
           done
 
           echo "All required Chinese packages are enabled."
-
-          echo "========================================"
-          echo "iStore"
-          echo "========================================"
-
-          if grep -q '^CONFIG_PACKAGE_luci-app-store=y$' .config; then
-            echo "iStore CONFIG enabled."
-          else
-            echo "ERROR: luci-app-store was removed by make defconfig."
-            exit 1
-          fi
 
           echo "========================================"
           echo "Passwall"
@@ -1103,7 +880,6 @@ jobs:
             echo ""
             echo "- Passwall (官方) + 中文"
             echo "- Lucky + 中文"
-            echo "- iStore 商店"
             echo "- OpenClash"
             echo "- Argon 主题"
             echo ""
@@ -1143,7 +919,7 @@ jobs:
           test -f "${RELEASE_DIR}/sha256sums.txt"
 
           # 使用 run_id + run_attempt，确保重新运行同一个 workflow 时
-          # 也不会因为 tag 已存在而失败。
+          # 也不会 kerana tag 已存在而失败。
           TAG="xg040g-${DEVICE_ID}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           RELEASE_NAME="Nokia XG-040G-${DEVICE_NAME} ImmortalWrt Build ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
 
