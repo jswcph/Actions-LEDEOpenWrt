@@ -268,52 +268,65 @@ jobs:
           ./scripts/feeds update istore
 
           echo "========================================"
-          echo "Install iStore packages"
+          echo "Install ALL iStore packages"
           echo "========================================"
 
-          # iStore 当前源码结构：
-          # feeds/istore/luci/luci-app-store/Makefile
-          # luci-app-store 依赖 luci-lib-taskd 等组件。
-          ./scripts/feeds install -d y -p istore luci-app-store
+          # 不再只安装 luci-app-store。
+          # iStore 当前包含：
+          #
+          # luci-app-store
+          # luci-lib-taskd
+          # luci-lib-xterm
+          # taskd
+          #
+          # luci-app-store -> luci-lib-taskd
+          # luci-lib-taskd -> luci-lib-xterm + taskd
+          #
+          # 因此直接安装整个 istore feed，避免 Kconfig
+          # 因依赖包没有进入 package/ 而删除 luci-app-store。
+
+          ./scripts/feeds install -a -p istore -d y
 
           echo "========================================"
-          echo "Verify iStore source"
+          echo "Verify iStore packages"
           echo "========================================"
 
-          test -f "feeds/istore/luci/luci-app-store/Makefile"
-          echo "OK: feeds/istore/luci/luci-app-store/Makefile"
+          REQUIRED_ISTORE_FILES="
+          package/feeds/istore/luci-app-store/Makefile
+          package/feeds/istore/luci-lib-taskd/Makefile
+          package/feeds/istore/luci-lib-xterm/Makefile
+          package/feeds/istore/taskd/Makefile
+          "
 
-          echo "========================================"
-          echo "Verify installed feed package"
-          echo "========================================"
-
-          if [ ! -e "package/feeds/istore/luci-app-store/Makefile" ]; then
-            echo "ERROR: package/feeds/istore/luci-app-store/Makefile was not installed."
-            echo "Installed iStore packages:"
-            find package/feeds/istore -maxdepth 2 -type f -name Makefile -print 2>/dev/null | sort || true
-            exit 1
-          fi
-
-          ls -l "package/feeds/istore/luci-app-store/Makefile"
-
-          echo "========================================"
-          echo "Verify iStore dependencies"
-          echo "========================================"
-
-          for pkg in luci-lib-taskd luci-lib-xterm taskd; do
-            if [ -e "package/feeds/istore/${pkg}/Makefile" ]; then
-              echo "OK: ${pkg}"
-            else
-              echo "WARNING: ${pkg} Makefile not found in package/feeds/istore"
+          for file in $REQUIRED_ISTORE_FILES; do
+            if [ ! -f "$file" ]; then
+              echo "ERROR: Missing iStore package:"
+              echo "$file"
+              exit 1
             fi
+
+            echo "OK: $file"
           done
 
           echo "========================================"
-          echo "iStore package information"
+          echo "iStore dependency Makefiles"
           echo "========================================"
 
-          grep -E 'LUCI_TITLE|LUCI_DEPENDS|LUCI_EXTRA_DEPENDS|PKG_VERSION' \
-            feeds/istore/luci/luci-app-store/Makefile || true
+          echo "--- luci-app-store ---"
+          grep -E 'LUCI_DEPENDS|LUCI_EXTRA_DEPENDS|PKG_VERSION' \
+            package/feeds/istore/luci-app-store/Makefile || true
+
+          echo "--- luci-lib-taskd ---"
+          grep -E 'LUCI_DEPENDS|LUCI_EXTRA_DEPENDS|PKG_VERSION' \
+            package/feeds/istore/luci-lib-taskd/Makefile || true
+
+          echo "--- taskd ---"
+          grep -E 'DEPENDS|PKG_VERSION|PKG_RELEASE' \
+            package/feeds/istore/taskd/Makefile || true
+
+          echo "========================================"
+          echo "iStore installation completed"
+          echo "========================================"
 
       # =====================================================
       # Lucky
