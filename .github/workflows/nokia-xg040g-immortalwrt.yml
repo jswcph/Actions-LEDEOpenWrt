@@ -534,7 +534,7 @@ jobs:
       - name: Setting root password
         shell: bash
         env:
-          ROOT_PASSWORD: "你的密码"
+          ROOT_PASSWORD: "password"
         run: |
           set -e
 
